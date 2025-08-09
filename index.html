@@ -1,0 +1,345 @@
+<!--
+photography-portfolio.html
+純單一檔案範例 (HTML + CSS + JS)
+說明：
+1) 這是一個可以直接放到 GitHub Pages 的單一 HTML 檔案範例，包含：首頁 hero 輪播、作品集網格 (可用分類過濾)、燈箱 (lightbox) 全螢幕檢視、關於我、聯絡資訊、響應式設計。
+2) 如何使用：
+   - 將此檔案命名為 index.html。
+   - 將整個資料夾（或僅此檔案）推上 GitHub repository，並啟用 GitHub Pages（branch: main / root）。
+   - 若要替換照片：搜尋檔案內 data-src 或直接替換 <img src="..."> 的網址為你的圖檔路徑（建議放到 /images/ 下），建議上傳多尺寸版本以利載入效率。
+3) 調整文字：搜尋 <!-- EDIT --> 標記位置做個人化修改（姓名、簡介、社群連結等）。
+4) 本範例使用外部圖檔作示範（Unsplash），上線時建議改為你自己的靜態圖檔或優化過的縮圖。
+
+注意：若想把相片放在子資料夾並保存在 GitHub，請把 <img src="..."> 的路徑改為相對路徑 (例如 images/gallery/photo1.jpg)。
+-->
+
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>攝影師作品集｜你的名字</title>
+  <meta name="description" content="攝影師作品集 — 展示婚禮、人像、風景等攝影作品。">
+  <link rel="icon" href="data:;base64,iVBORw0KGgo="> <!-- 空白favicon，可替換 -->
+  <style>
+    /* ----- 基礎樣式 ----- */
+    :root{
+      --bg:#0f1724;
+      --card:#0b1220;
+      --accent:#ffd166;
+      --muted:#94a3b8;
+      --glass: rgba(255,255,255,0.03);
+      --max-width:1200px;
+      font-family: 'Noto Sans TC', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#0b0f17 0%, #071024 100%);color:#e6eef8}
+    a{color:var(--accent);text-decoration:none}
+    .container{max-width:var(--max-width);margin:0 auto;padding:24px}
+
+    /* ----- 頂部導覽 ----- */
+    header{position:fixed;top:12px;left:0;right:0;z-index:40}
+    .nav{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 18px;background:linear-gradient(90deg, rgba(10,12,20,0.6), rgba(6,8,15,0.3));backdrop-filter:blur(6px);border-radius:12px;margin:0 12px}
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{width:48px;height:48px;border-radius:8px;background:linear-gradient(135deg,var(--accent),#ff8a65);display:flex;align-items:center;justify-content:center;font-weight:700;color:#082032}
+    nav a{margin:0 8px;color:#cfe8ff}
+    .cta{padding:8px 12px;border-radius:8px;background:var(--accent);color:#082032;font-weight:600}
+
+    /* ----- Hero 輪播 ----- */
+    .hero{height:78vh;min-height:420px;display:grid;align-items:center;border-radius:18px;overflow:hidden;margin:84px 12px 18px;padding:0}
+    .slides{position:relative;height:100%}
+    .slide{position:absolute;inset:0;background-position:center;background-size:cover;opacity:0;transform:scale(1.02);transition:opacity .8s ease, transform .9s ease}
+    .slide.active{opacity:1;transform:scale(1)}
+    .hero-overlay{position:absolute;inset:0;background:linear-gradient(180deg, rgba(4,6,12,0.2), rgba(4,6,12,0.6));display:flex;flex-direction:column;justify-content:flex-end;padding:48px}
+    .hero-title{font-size:clamp(28px,5vw,44px);font-weight:800;letter-spacing:0.02em;margin:0}
+    .hero-sub{color:var(--muted);margin-top:8px}
+    .hero-actions{margin-top:18px;display:flex;gap:12px}
+
+    /* ----- 主要區塊 ----- */
+    main{padding:18px 12px 80px}
+    section.card{background:var(--glass);border-radius:14px;padding:18px;margin:18px 12px}
+
+    /* ----- Gallery ----- */
+    .toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+    .filters{display:flex;gap:8px;flex-wrap:wrap}
+    .filter{padding:8px 12px;border-radius:999px;background:rgba(255,255,255,0.03);cursor:pointer}
+    .filter.active{background:linear-gradient(90deg,var(--accent),#ffb76b);color:#082032}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-top:14px}
+    .item{position:relative;border-radius:10px;overflow:hidden;cursor:pointer;background:#071226}
+    .item img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .6s ease}
+    .item:hover img{transform:scale(1.05)}
+    .item .meta{position:absolute;left:12px;bottom:12px;background:linear-gradient(90deg, rgba(2,6,10,0.5), rgba(2,6,10,0.2));padding:8px 10px;border-radius:8px;font-weight:600}
+
+    /* ----- Lightbox ----- */
+    .lightbox{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,4,8,0.8);z-index:80}
+    .lightbox.active{display:flex}
+    .lightbox .frame{max-width:92%;max-height:92%;display:flex;flex-direction:column;gap:12px}
+    .lightbox img{max-width:100%;max-height:76vh;border-radius:10px;display:block}
+    .lb-meta{display:flex;justify-content:space-between;align-items:center}
+    .lb-close{background:rgba(255,255,255,0.06);padding:8px 10px;border-radius:8px}
+
+    /* ----- About & Contact ----- */
+    .two-col{display:grid;grid-template-columns:1fr 380px;gap:18px}
+    .profile{padding:14px}
+    .socials{display:flex;gap:10px;margin-top:12px}
+    .socials a{padding:8px 10px;border-radius:8px;background:rgba(255,255,255,0.03)}
+
+    /* ----- Footer ----- */
+    footer{padding:26px;text-align:center;color:var(--muted)}
+
+    /* ----- Responsive ----- */
+    @media (max-width:900px){
+      .two-col{grid-template-columns:1fr}
+      .nav{padding:8px 12px}
+      .hero{height:60vh}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="nav container">
+      <div class="brand">
+        <div class="logo">P</div>
+        <div>
+          <div style="font-weight:700">你的名字 <!-- EDIT: 攝影師姓名 --></div>
+          <div style="font-size:12px;color:var(--muted)">攝影師 • 婚禮 / 人像 / 風景</div>
+        </div>
+      </div>
+      <nav>
+        <a href="#home">首頁</a>
+        <a href="#gallery">作品集</a>
+        <a href="#about">關於我</a>
+        <a href="#contact" class="cta">聯絡我</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <!-- HERO -->
+    <section id="home" class="hero">
+      <div class="slides">
+        <div class="slide active" style="background-image:url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=1600&auto=format&fit=crop&ixlib=rb-4.0.3&s=1b5f5f2f7f2a9f2c4b6f3c7a8f0b0c6d');"></div>
+        <div class="slide" style="background-image:url('https://images.unsplash.com/photo-1520975914576-0f0b7cbdc9e8?q=80&w=1600&auto=format&fit=crop&ixlib=rb-4.0.3&s=2d8e7f8b6d8f6c7a4e5f6a7b8c9d0e1f');"></div>
+        <div class="slide" style="background-image:url('https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=1600&auto=format&fit=crop&ixlib=rb-4.0.3&s=6a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d');"></div>
+      </div>
+      <div class="hero-overlay container">
+        <h1 class="hero-title">捕捉每一刻的光影</h1>
+        <div class="hero-sub">婚禮 • 人像 • 風景 — 以自然光與情感為核心的攝影</div>
+        <div class="hero-actions">
+          <a class="cta" href="#gallery">瀏覽作品</a>
+          <a href="#contact" style="padding:8px 12px;border-radius:8px;background:rgba(255,255,255,0.04);">聯絡我</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- GALLERY -->
+    <section id="gallery" class="card container">
+      <div class="toolbar">
+        <div>
+          <h2 style="margin:0">作品集</h2>
+          <div style="color:var(--muted);margin-top:6px">點擊照片可放大檢視</div>
+        </div>
+        <div class="filters" id="filters">
+          <div class="filter active" data-filter="all">全部</div>
+          <div class="filter" data-filter="wedding">婚禮</div>
+          <div class="filter" data-filter="portrait">人像</div>
+          <div class="filter" data-filter="landscape">風景</div>
+        </div>
+      </div>
+
+      <div class="grid" id="grid">
+        <!-- 範例項目：建議上傳圖片到 /images/gallery/ 並更改 data-src 或 src -->
+
+        <!-- EDIT: 可替換為你的圖片（使用相對路徑在 GitHub 上更穩定） -->
+        <div class="item" data-category="wedding" tabindex="0" data-title="婚禮｜新人的微笑" data-src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1200&auto=format&fit=crop">
+          <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=800&auto=format&fit=crop" alt="婚禮1" loading="lazy">
+          <div class="meta">婚禮</div>
+        </div>
+
+        <div class="item" data-category="portrait" tabindex="0" data-title="人像｜自然光人像" data-src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=1200&auto=format&fit=crop">
+          <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=800&auto=format&fit=crop" alt="人像1" loading="lazy">
+          <div class="meta">人像</div>
+        </div>
+
+        <div class="item" data-category="landscape" tabindex="0" data-title="風景｜大地的光" data-src="https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=1200&auto=format&fit=crop">
+          <img src="https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=800&auto=format&fit=crop" alt="風景1" loading="lazy">
+          <div class="meta">風景</div>
+        </div>
+
+        <div class="item" data-category="portrait" tabindex="0" data-title="人像｜黑白剖面" data-src="https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=1200&auto=format&fit=crop">
+          <img src="https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=800&auto=format&fit=crop" alt="人像2" loading="lazy">
+          <div class="meta">人像</div>
+        </div>
+
+        <div class="item" data-category="wedding" tabindex="0" data-title="婚禮｜誓約時刻" data-src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=1200&auto=format&fit=crop">
+          <img src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=800&auto=format&fit=crop" alt="婚禮2" loading="lazy">
+          <div class="meta">婚禮</div>
+        </div>
+
+        <div class="item" data-category="landscape" tabindex="0" data-title="風景｜黃昏" data-src="https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=1200&auto=format&fit=crop">
+          <img src="https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=800&auto=format&fit=crop" alt="風景2" loading="lazy">
+          <div class="meta">風景</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- LIGHTBOX -->
+    <div id="lightbox" class="lightbox" aria-hidden="true">
+      <div class="frame">
+        <img id="lb-img" src="" alt="">
+        <div class="lb-meta">
+          <div id="lb-title" style="font-weight:700"></div>
+          <div style="display:flex;gap:8px">
+            <button id="prev" class="lb-close" aria-label="上一張">◀</button>
+            <button id="next" class="lb-close" aria-label="下一張">▶</button>
+            <button id="close" class="lb-close" aria-label="關閉">✕</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ABOUT + CONTACT -->
+    <section id="about" class="card container">
+      <div class="two-col">
+        <div class="profile">
+          <h3>關於我</h3>
+          <p><!-- EDIT: 簡短自我介紹 -->
+            你好，我是你的名字，一位專注於婚禮與人像的攝影師。我喜歡以自然光捕捉真實情緒，並透過構圖講述每個故事。
+          </p>
+          <p style="color:var(--muted);margin-top:6px">服務項目：婚禮攝影 / 個人寫真 / 商業攝影</p>
+
+          <div class="socials">
+            <!-- EDIT: 填入你的社群或聯絡方式 -->
+            <a href="#">Instagram</a>
+            <a href="#">Facebook</a>
+            <a href="#">Email</a>
+          </div>
+        </div>
+
+        <aside style="background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:18px">
+          <h4>預約與詢價</h4>
+          <p style="color:var(--muted)">請寄信至：<strong>youremail@example.com</strong></p>
+          <p style="color:var(--muted);font-size:14px">或加入 Line：@yourlineid</p>
+          <p style="color:var(--muted);font-size:14px">也可在 IG 私訊預約檔期</p>
+        </aside>
+      </div>
+    </section>
+
+    <section id="contact" class="card container">
+      <h3>聯絡我</h3>
+      <p style="color:var(--muted);margin-top:6px">留下你的需求，我會盡快回覆。</p>
+      <form id="contactForm" style="margin-top:12px;display:grid;gap:8px;max-width:720px">
+        <input placeholder="姓名" name="name" required style="padding:12px;border-radius:8px;border:0;background:rgba(255,255,255,0.03);color:inherit">
+        <input placeholder="Email" name="email" type="email" required style="padding:12px;border-radius:8px;border:0;background:rgba(255,255,255,0.03);color:inherit">
+        <textarea placeholder="需求內容 (日期/服務內容/預算)" name="message" required style="padding:12px;border-radius:8px;border:0;background:rgba(255,255,255,0.03);color:inherit;min-height:120px"></textarea>
+        <div style="display:flex;gap:10px">
+          <button type="submit" class="cta">送出訊息</button>
+          <button type="reset" style="padding:8px 12px;border-radius:8px;background:rgba(255,255,255,0.03);">重新填寫</button>
+        </div>
+        <div id="formMsg" style="color:var(--muted);font-size:14px"></div>
+      </form>
+      <p style="color:var(--muted);margin-top:12px">備註：因為 GitHub Pages 無後端，表單送出可改成 mailto: 或串接第三方表單服務（Netlify Forms、Formspree 之類）。</p>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="container">
+      © <span id="year"></span> 你的名字 • 聯絡：youremail@example.com
+    </div>
+  </footer>
+
+  <script>
+    // YEAR
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // HERO SLIDES
+    (function(){
+      const slides = document.querySelectorAll('.slide');
+      let idx = 0;
+      function show(i){
+        slides.forEach((s,si)=>s.classList.toggle('active', si===i));
+      }
+      setInterval(()=>{ idx = (idx+1) % slides.length; show(idx); }, 5000);
+    })();
+
+    // FILTERS
+    const filters = document.getElementById('filters');
+    const grid = document.getElementById('grid');
+    filters.addEventListener('click', e=>{
+      const btn = e.target.closest('.filter');
+      if(!btn) return;
+      [...filters.querySelectorAll('.filter')].forEach(f=>f.classList.remove('active'));
+      btn.classList.add('active');
+      const cat = btn.dataset.filter;
+      [...grid.querySelectorAll('.item')].forEach(item=>{
+        item.style.display = (cat==='all' || item.dataset.category===cat) ? '' : 'none';
+      });
+    });
+
+    // LIGHTBOX
+    const lightbox = document.getElementById('lightbox');
+    const lbImg = document.getElementById('lb-img');
+    const lbTitle = document.getElementById('lb-title');
+    const items = Array.from(document.querySelectorAll('.item'));
+    let curIndex = -1;
+
+    function openLightbox(i){
+      const it = items[i];
+      if(!it) return;
+      const src = it.dataset.src || it.querySelector('img').src;
+      const title = it.dataset.title || '';
+      lbImg.src = src;
+      lbImg.alt = title;
+      lbTitle.textContent = title;
+      lightbox.classList.add('active');
+      lightbox.setAttribute('aria-hidden','false');
+      curIndex = i;
+    }
+    function closeLightbox(){
+      lightbox.classList.remove('active');
+      lightbox.setAttribute('aria-hidden','true');
+      lbImg.src = '';
+      curIndex = -1;
+    }
+    function prev(){ openLightbox((curIndex-1+items.length)%items.length); }
+    function next(){ openLightbox((curIndex+1)%items.length); }
+
+    items.forEach((it,idx)=>{
+      it.addEventListener('click',()=>openLightbox(idx));
+      it.addEventListener('keydown', (e)=>{ if(e.key==='Enter') openLightbox(idx); });
+    });
+
+    document.getElementById('close').addEventListener('click', closeLightbox);
+    document.getElementById('prev').addEventListener('click', prev);
+    document.getElementById('next').addEventListener('click', next);
+    lightbox.addEventListener('click', (e)=>{ if(e.target===lightbox) closeLightbox(); });
+    document.addEventListener('keydown', (e)=>{
+      if(lightbox.classList.contains('active')){
+        if(e.key==='Escape') closeLightbox();
+        if(e.key==='ArrowLeft') prev();
+        if(e.key==='ArrowRight') next();
+      }
+    });
+
+    // CONTACT FORM (client-only fallback using mailto)
+    document.getElementById('contactForm').addEventListener('submit', function(e){
+      e.preventDefault();
+      const form = e.target;
+      const name = encodeURIComponent(form.name.value);
+      const email = encodeURIComponent(form.email.value);
+      const msg = encodeURIComponent(form.message.value);
+      // 方式一：使用 mailto (會開啟使用者的郵件客戶端)
+      const mailto = `mailto:youremail@example.com?subject=${encodeURIComponent('網站聯絡：'+form.name.value)}&body=${encodeURIComponent('姓名：')}${name}%0D%0A${encodeURIComponent('Email：')}${email}%0D%0A%0D%0A${msg}`;
+      window.location.href = mailto;
+      // 方式二：若你使用 Formspree / Netlify Forms，可在此整合 API 呼叫。
+      document.getElementById('formMsg').textContent = '已嘗試開啟郵件程式，若無反應請手動寄信至 youremail@example.com';
+    });
+
+    // Optional: lazy load higher-res on click (already using data-src)
+    // 當燈箱開啟時，img src 已設定為 data-src (較大圖)
+
+  </script>
+</body>
+</html>
